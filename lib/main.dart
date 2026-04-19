@@ -1,21 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'app/modules/calculator/views/calculator_view.dart';
-import 'app/modules/calculator/bindings/calculator_binding.dart';
+import 'package:provider/provider.dart'; // Sau khi chạy lệnh add, dòng này sẽ hết lỗi
+
+import 'app/modules/calculator/screens/calculator_screen.dart';
+import 'app/modules/calculator/providers/calculator_provider.dart';
 
 void main() {
-  runApp(
-    GetMaterialApp(
-      debugShowCheckedModeBanner: false,
-      initialRoute: '/calculator',
-      getPages: [
-        GetPage(
-          name: '/calculator',
-          page: () => const CalculatorView(),
-          binding: CalculatorBinding(),
-        ),
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => CalculatorProvider()),
       ],
-      theme: ThemeData(fontFamily: 'Roboto'),
-    ),
-  );
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Fruit Ecosystem App',
+        home: const CalculatorScreen(), 
+      ),
+    );
+  }
 }
