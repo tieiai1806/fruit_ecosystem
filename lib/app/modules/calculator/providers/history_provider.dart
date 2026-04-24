@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/calculation_history.dart';
-import '../services/storage_service.dart';
+import '../../../../models/calculation_history.dart';
+import '../../../../services/storage_service.dart';
 
 class HistoryProvider extends ChangeNotifier {
   List<CalculationHistory> _history = [];
@@ -11,12 +11,27 @@ class HistoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addRecord(String expression, String result) async {
-    _history.insert(0, CalculationHistory(
-      expression: expression, 
-      result: result, 
-      timestamp: DateTime.now()
-    ));
+  Future<void> addRecord(String expression, String result) async {
+    if (expression.isEmpty) return;
+
+    final newRecord = CalculationHistory(
+      expression: expression,
+      result: result,
+      timestamp: DateTime.now(),
+    );
+
+    _history.insert(0, newRecord);
+
+    if (_history.length > 50) {
+      _history.removeLast();
+    }
+
+    await StorageService.saveHistory(_history);
+    notifyListeners();
+  }
+
+  Future<void> clearHistory() async {
+    _history = [];
     await StorageService.saveHistory(_history);
     notifyListeners();
   }

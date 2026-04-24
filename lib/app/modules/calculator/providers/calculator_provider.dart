@@ -1,74 +1,97 @@
 import 'package:flutter/material.dart';
-import '../../utils/constants.dart';
-import '../../../modules/utils/calculator_logic.dart';
+import 'package:provider/provider.dart';
+import 'package:fruit_ecosystem/app/modules/utils/calculator_logic.dart'; 
+import 'history_provider.dart';
 
-// 1. Định nghĩa Mode
 enum CalculatorMode { basic, scientific }
 
 class CalculatorProvider extends ChangeNotifier {
-  String _expression = "";
+  final TextEditingController expressionController = TextEditingController();
   String _result = "0";
-  double _memory = 0;
-  bool _hasMemory = false;
-  
-  // 2. Biến trạng thái Mode
   CalculatorMode _mode = CalculatorMode.basic;
 
-  String get expression => _expression;
   String get result => _result;
-  bool get hasMemory => _hasMemory;
-  CalculatorMode get mode => _mode; // Getter cho UI
+  CalculatorMode get mode => _mode;
 
-  // 3. Hàm chuyển đổi Mode
   void toggleMode() {
-    _mode = (_mode == CalculatorMode.basic) 
-            ? CalculatorMode.scientific 
-            : CalculatorMode.basic;
+    _mode = (_mode == CalculatorMode.basic) ? CalculatorMode.scientific : CalculatorMode.basic;
     notifyListeners();
   }
 
   void appendValue(String value) {
-    _expression += value;
+    final String text = expressionController.text;
+    int cursorPosition = expressionController.selection.baseOffset;
+    if (cursorPosition < 0) cursorPosition = text.length;
+
+    final String leftPart = text.substring(0, cursorPosition);
+    final String rightPart = text.substring(cursorPosition);
+
+    expressionController.text = leftPart + value + rightPart;
+    expressionController.selection =
+        TextSelection.collapsed(offset: cursorPosition + value.length);
+
+    notifyListeners();
+  }
+
+  void backspace() {
+    final String text = expressionController.text;
+    int cursorPosition = expressionController.selection.baseOffset;
+    if (cursorPosition < 0) cursorPosition = text.length;
+
+    if (cursorPosition > 0) {
+      expressionController.text =
+          text.substring(0, cursorPosition - 1) + text.substring(cursorPosition);
+      expressionController.selection =
+          TextSelection.collapsed(offset: cursorPosition - 1);
+      notifyListeners();
+    }
+  }
+
+  // ✅ FIX CE (xóa phần tử cuối)
+  void clearEntry() {
+    final text = expressionController.text;
+    if (text.isEmpty) return;
+
+    final newText = text.replaceFirst(RegExp(r'[^+\-*/%()]+$'), '');
+
+    expressionController.text = newText;
+    expressionController.selection =
+        TextSelection.collapsed(offset: newText.length);
+
     notifyListeners();
   }
 
   void addScientificFunction(String func) {
-    _expression += "$func(";
-    notifyListeners();
+    String valueToAdd =
+        (func == 'x^y') ? '^' : (func == 'exp') ? 'e' : '$func(';
+    appendValue(valueToAdd);
   }
 
-  void calculate() {
-    _result = CalculatorLogic.calculate(_expression);
+  void calculate(BuildContext context) {
+    final expression = expressionController.text;
+
+    if (expression.isEmpty) return;
+
+    _result = CalculatorLogic.calculate(expression);
+
+    // ✅ chỉ lưu khi không lỗi
+    if (_result != "Error") {
+      Provider.of<HistoryProvider>(context, listen: false)
+          .addRecord(expression, _result);
+    }
+
     notifyListeners();
   }
 
   void clear() {
-    _expression = "";
+    expressionController.clear();
     _result = "0";
     notifyListeners();
   }
 
-  // --- Các hàm Memory ---
-  void memoryAdd() {
-    _memory += double.tryParse(_result) ?? 0;
-    _hasMemory = true;
-    notifyListeners();
-  }
-
-  void memorySubtract() {
-    _memory -= double.tryParse(_result) ?? 0;
-    _hasMemory = true;
-    notifyListeners();
-  }
-
-  void memoryRecall() {
-    _expression = _memory.toString();
-    notifyListeners();
-  }
-
-  void memoryClear() {
-    _memory = 0;
-    _hasMemory = false;
-    notifyListeners();
+  @override
+  void dispose() {
+    expressionController.dispose();
+    super.dispose();
   }
 }

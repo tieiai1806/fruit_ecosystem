@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/calculator_provider.dart';
 import 'widgets/calculator_button.dart';
-
+import '../../../modules/calculator/providers/history_provider.dart';
+import '../../../modules/calculator/screens/history_screen.dart';
 class CalculatorScreen extends StatelessWidget {
   const CalculatorScreen({super.key});
 
@@ -15,7 +16,7 @@ class CalculatorScreen extends StatelessWidget {
   ];
 
   final List<String> scientificButtons = const [
-    '2nd', 'sin', 'cos', 'tan', 'Ln', 'log',
+    'exp', 'sin', 'cos', 'tan', 'Ln', 'log',
     'x^2', '√', 'x^y', '(', ')', '÷',
     'MC', '7', '8', '9', 'C', '×',
     'MR', '4', '5', '6', 'CE', '-',
@@ -29,6 +30,16 @@ class CalculatorScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text("Calculator"),
         actions: [
+          // NÚT XEM LỊCH SỬ
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const HistoryScreen()),
+              );
+            },
+          ),
+          // NÚT CÀI ĐẶT
           IconButton(
             icon: const Icon(Icons.settings_applications),
             onPressed: () => context.read<CalculatorProvider>().toggleMode(),
@@ -43,7 +54,7 @@ class CalculatorScreen extends StatelessWidget {
 
           return Column(
             children: [
-              // Display Area
+              // 1. DISPLAY AREA
               Expanded(
                 flex: 1,
                 child: Container(
@@ -53,14 +64,47 @@ class CalculatorScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.end,
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(provider.expression, style: const TextStyle(fontSize: 24, color: Colors.grey)),
-                      Text(provider.result, style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold)),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        reverse: true,
+                        child: SizedBox(
+                          width: MediaQuery.of(context).size.width * 0.8,
+                          child: TextField(
+                            controller: provider.expressionController,
+                            readOnly: true,
+                            showCursor: true,
+                            textAlign: TextAlign.right,
+                            decoration: const InputDecoration(border: InputBorder.none),
+                            style: const TextStyle(fontSize: 24, color: Colors.grey),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        provider.result,
+                        style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
+                      ),
                     ],
                   ),
                 ),
               ),
-              
-              // Grid Layout
+
+              // 2. BACKSPACE BUTTON (Hàng riêng)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: SizedBox(
+                    width: 80,
+                    height: 50,
+                    child: CalculatorButton(
+                      label: '⌫',
+                      onTap: () => provider.backspace(),
+                    ),
+                  ),
+                ),
+              ),
+
+              // 3. GRID LAYOUT
               Expanded(
                 flex: 2,
                 child: GridView.builder(
@@ -76,16 +120,25 @@ class CalculatorScreen extends StatelessWidget {
                     final label = currentButtons[index];
                     return CalculatorButton(
                       label: label,
-                      onTap: () {
-                        // Logic phân loại nút bấm
-                        if (label == '=') provider.calculate();
-                        else if (label == 'C') provider.clear();
-                        else if (['sin', 'cos', 'tan', 'log', 'Ln'].contains(label)) {
-                          provider.addScientificFunction(label);
-                        } else {
-                          provider.appendValue(label);
-                        }
-                      },
+                      // CHỈ đoạn onTap cần sửa 👇
+
+onTap: () {
+  if (label == '=') {
+    provider.calculate(context);
+  } else if (label == 'C') {
+    provider.clear();
+  } else if (label == 'CE') {
+    provider.clearEntry(); // ✅ FIX
+  } else if (['sin', 'cos', 'tan', 'log', 'Ln', '√', 'exp'].contains(label)) {
+    provider.addScientificFunction(label);
+  } else if (label == 'x^y') {
+    provider.addScientificFunction('x^y');
+  } else if (label == 'Π') {
+    provider.appendValue('Π');
+  } else {
+    provider.appendValue(label);
+  }
+}
                     );
                   },
                 ),
